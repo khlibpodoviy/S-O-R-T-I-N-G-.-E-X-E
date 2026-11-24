@@ -1,0 +1,2391 @@
+<!DOCTYPE html>
+<html lang="ru" data-type="hybrid">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SORTING_SYSTEM.EXE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=PT+Serif:wght@400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* Monochromatic by default */
+            --bg-color: #080808;
+            --fg-color: #d1cfc7;
+            --glow-color: rgba(209, 207, 199, 0.15);
+            --border-width: 4px;
+        }
+
+        /* House Themes (Dark Academia / Softer Palette) */
+        body.theme-gryffindor {
+            --bg-color: #1c0d0d;
+            --fg-color: #b85151;
+            --glow-color: rgba(184, 81, 81, 0.1);
+        }
+        body.theme-slytherin {
+            --bg-color: #0e1711;
+            --fg-color: #688f70;
+            --glow-color: rgba(104, 143, 112, 0.1);
+        }
+        body.theme-ravenclaw {
+            --bg-color: #0c121c;
+            --fg-color: #6b8caf;
+            --glow-color: rgba(107, 140, 175, 0.1);
+        }
+        body.theme-hufflepuff {
+            --bg-color: #1a1710;
+            --fg-color: #c7a456;
+            --glow-color: rgba(199, 164, 86, 0.1);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--fg-color);
+            font-family: 'Press Start 2P', monospace;
+            text-shadow: 0 0 2px var(--glow-color);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+            transition: background-color 1s, color 1s, text-shadow 1s;
+            line-height: 1.6;
+        }
+
+        /* CRT Scanlines and flicker */
+        body::before {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 50;
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.95; }
+            5% { opacity: 0.85; }
+            10% { opacity: 0.95; }
+            100% { opacity: 1; }
+        }
+
+        .crt-container {
+            width: 100%;
+            max-width: 960px;
+            padding: 2rem;
+            position: relative;
+            z-index: 10;
+            animation: none;
+        }
+
+        .retro-box {
+            border: var(--border-width) solid var(--fg-color);
+            background-color: var(--bg-color);
+            padding: 2rem;
+            position: relative;
+            box-shadow: 0 0 4px var(--glow-color), inset 0 0 4px var(--glow-color);
+        }
+
+        /* Corner accents for the box */
+        .retro-box::after, .retro-box::before {
+            content: '';
+            position: absolute;
+            width: 10px; height: 10px;
+            background: var(--fg-color);
+        }
+        .retro-box::before { top: -4px; left: -4px; box-shadow: calc(100% + 4px) 0 0 var(--fg-color); }
+        .retro-box::after { bottom: -4px; right: -4px; }
+
+        .btn-retro {
+            background: var(--bg-color);
+            color: var(--fg-color);
+            border: 2px solid var(--fg-color);
+            font-family: 'Press Start 2P', monospace;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: none; /* No smooth transitions in retro! */
+            box-shadow: 0 0 2px var(--glow-color);
+            font-size: 0.7rem;
+            text-align: left;
+        }
+
+        .btn-retro:hover {
+            background: var(--fg-color);
+            color: var(--bg-color);
+            text-shadow: none;
+        }
+
+        .btn-retro:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-retro:disabled:hover {
+            background: var(--bg-color);
+            color: var(--fg-color);
+        }
+
+        .health-bar-container {
+            border: 2px solid var(--fg-color);
+            height: 24px;
+            width: 100%;
+            padding: 2px;
+            margin-bottom: 2rem;
+        }
+
+        .health-bar-fill {
+            background-color: var(--fg-color);
+            height: 100%;
+            width: 0%;
+            box-shadow: 0 0 3px var(--glow-color);
+        }
+
+        .cursor-blink {
+            animation: blink 1s step-end infinite;
+            display: inline-block;
+            width: 10px;
+            height: 1em;
+            background-color: var(--fg-color);
+            vertical-align: bottom;
+            margin-left: 4px;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        .hidden { display: none !important; }
+        
+        /* Typography overrides for readability */
+        h1 { font-size: 1.5rem; line-height: 1.5; }
+        h2 { font-size: 1rem; line-height: 1.8; }
+        p { font-size: 0.8rem; line-height: 1.8; }
+        
+        @media (min-width: 768px) {
+            h1 { font-size: 2rem; }
+            h2 { font-size: 1.2rem; }
+            p { font-size: 1rem; }
+            .btn-retro { font-size: 0.9rem; }
+        }
+
+        /* SVG Pixel Art Styling */
+        .pixel-art {
+            width: 128px;
+            height: 128px;
+            margin: 0 auto;
+            display: block;
+            filter: drop-shadow(0 0 2px var(--glow-color));
+        }
+        .pixel-art rect {
+            fill: var(--fg-color);
+        }
+        .pixel-art .bg-rect {
+            fill: var(--bg-color);
+        }
+
+        /* Hat Animation */
+        .pixel-hat .mouth-open { opacity: 0; }
+        .pixel-hat .mouth-closed { opacity: 1; }
+
+        .pixel-hat.is-talking .mouth-open {
+            animation: mouth-flap 0.2s steps(1) infinite;
+        }
+        .pixel-hat.is-talking .mouth-closed {
+            animation: mouth-flap-alt 0.2s steps(1) infinite;
+        }
+
+        @keyframes mouth-flap {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+        @keyframes mouth-flap-alt {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* Анимация для маскотов факультета */
+        .pixel-mascot {
+            width: 80px;
+            height: 80px;
+            display: block;
+            filter: drop-shadow(0 0 2px var(--glow-color));
+            animation: mascot-hop 0.5s steps(2) infinite alternate;
+        }
+
+        @keyframes mascot-hop {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-6px); }
+        }
+
+        /* Vertical Layout */
+        .vertical-layout {
+            min-height: 650px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Muted house colours; the text remains warm and legible. */
+        :root { --bg-color:#111210; --panel:#181916; --fg-color:#e1dfd4; --accent:#aaa99d; --line:#55574f; --hover:#2a2b25; --glow-color:transparent; --border-width:2px; }
+        body.theme-gryffindor { --bg-color:#1c1516; --panel:#241a1b; --fg-color:#eaded6; --accent:#d19487; --line:#795451; --hover:#38272a; --glow-color:transparent; }
+        body.theme-slytherin { --bg-color:#131b18; --panel:#1b2520; --fg-color:#dce7df; --accent:#9ab8a4; --line:#526e60; --hover:#27372e; --glow-color:transparent; }
+        body.theme-ravenclaw { --bg-color:#151b24; --panel:#1c2530; --fg-color:#dfe6ee; --accent:#9eb6d2; --line:#536a84; --hover:#293747; --glow-color:transparent; }
+        body.theme-hufflepuff { --bg-color:#1e1b13; --panel:#282319; --fg-color:#eee5d1; --accent:#d3bb81; --line:#81704a; --hover:#3b3221; --glow-color:transparent; }
+        body { text-shadow:none; }
+        body::before { background:repeating-linear-gradient(0deg, transparent 0 3px, rgba(0,0,0,.045) 3px 4px); background-size:auto; }
+        .crt-container { padding:1.25rem; }
+        .toolbar { display:flex; gap:1rem; flex-wrap:wrap; justify-content:flex-end; align-items:center; margin:0 0 1rem; font-size:.65rem; }
+        .toolbar button { background:transparent; color:var(--fg-color); border:0; cursor:pointer; font:inherit; }
+        .toolbar .sound-toggle { border:1px solid var(--line); padding:.55rem .65rem; color:var(--accent); }
+        .retro-box { border-color:var(--line); background:var(--panel); box-shadow:none; }
+        .retro-box::before,.retro-box::after { width:7px;height:7px;background:var(--accent);box-shadow:none; }
+        .retro-box::before { top:-2px;left:-2px; }.retro-box::after { bottom:-2px;right:-2px; }
+        .btn-retro { background:transparent; color:var(--fg-color); border-color:var(--line); box-shadow:none; line-height:1.8; transition:background .12s,border-color .12s; }
+        .btn-retro:hover,.btn-retro:focus-visible { background:var(--hover); color:var(--fg-color); border-color:var(--accent); }
+        button:focus-visible { outline:2px solid var(--accent);outline-offset:4px; }
+        .health-bar-container { border-color:var(--line);height:15px; }
+        .health-bar-fill,.cursor-blink { background:var(--accent);box-shadow:none; }
+        .pixel-art,.pixel-mascot { filter:none; }
+        .pixel-art rect { fill:var(--accent); }
+        .pixel-art .bg-rect { fill:var(--panel); }
+        #mascot-container svg rect[fill="var(--fg-color)"] { fill:var(--accent); }
+        #mascot-container svg rect[fill="var(--bg-color)"] { fill:var(--panel); }
+        #result-house { color:var(--accent); overflow-wrap:anywhere; }
+        #start-desc,#question-text,#tie-breaker-text,#result-desc { white-space:pre-wrap; overflow-wrap:break-word; }
+        .border-dashed { border-color:var(--line) !important; }
+        @media(max-width:767px) { .retro-box { padding:1.1rem; } .crt-container { padding:.8rem; } .toolbar { gap:.6rem; } }
+        @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important;transition:none !important; } }
+
+        *,*::before,*::after{box-sizing:border-box} h1,h2,p{margin:0;font-weight:normal} button{font:inherit} svg{vertical-align:middle}
+        .w-full{width:100%}.max-w-4xl{max-width:960px}.mx-auto{margin-left:auto;margin-right:auto}.relative{position:relative}
+        .grid{display:grid}.grid-cols-1{grid-template-columns:minmax(0,1fr)}.gap-8{gap:2rem}.flex{display:flex}.flex-col{flex-direction:column}.flex-grow{flex-grow:1}.flex-shrink-0{flex-shrink:0}
+        .items-center{align-items:center}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.justify-start{justify-content:flex-start}
+        .border-b{border-bottom:1px dashed var(--line)}.border-t{border-top:1px dashed var(--line)}.border-t-2{border-top:2px dashed var(--line)}
+        .pb-8{padding-bottom:2rem}.pt-4{padding-top:1rem}.py-4{padding-top:1rem;padding-bottom:1rem}.py-3{padding-top:.75rem;padding-bottom:.75rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.px-4{padding-left:1rem;padding-right:1rem}
+        .mb-8{margin-bottom:2rem}.mb-6{margin-bottom:1.5rem}.mb-4{margin-bottom:1rem}.mb-2{margin-bottom:.5rem}.mt-2{margin-top:.5rem}.mt-4{margin-top:1rem}.space-y-3>*+*{margin-top:.75rem}
+        .text-left{text-align:left}.text-center{text-align:center}.uppercase{text-transform:uppercase}.text-xs{font-size:.65rem}.text-sm{font-size:.78rem}.text-xl{font-size:1.05rem}.text-2xl{font-size:1.4rem}.leading-relaxed{line-height:1.8}.leading-loose{line-height:2}
+        .min-h-\[500px\]{min-height:500px}.min-h-\[350px\]{min-height:350px}.min-h-\[150px\]{min-height:150px}.min-h-\[120px\]{min-height:120px}.h-1{height:.25rem}.w-0{width:0}
+        .opacity-0{opacity:0}.opacity-50{opacity:.5}.opacity-100{opacity:1}.pointer-events-none{pointer-events:none}.transition-opacity{transition:opacity .3s}.transition-all{transition:all .3s}.lang-btn:hover{opacity:1!important}
+        .duration-500{transition-duration:.5s}.duration-300{transition-duration:.3s}
+        @media(min-width:768px){.md\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.md\:items-start{align-items:flex-start}.md\:border-b-0{border-bottom:0}.md\:border-r{border-right:1px dashed var(--line)}.md\:pb-0{padding-bottom:0}.md\:pr-8{padding-right:2rem}.md\:text-left{text-align:left}}
+        @media(max-width:767px){.min-h-\[350px\]{min-height:0}.min-h-\[150px\],.min-h-\[120px\]{min-height:0}.retro-box{gap:1.5rem}.mb-8{margin-bottom:1.25rem}.pixel-art{width:100px;height:100px}}
+        #btn-back[disabled]{visibility:hidden}
+
+        /* Typography presets: independent of house palette and game state. */
+        :root {
+            --pixel: 'Press Start 2P', 'Courier New', monospace;
+            --mono: 'IBM Plex Mono', 'Cascadia Mono', Consolas, 'DejaVu Sans Mono', monospace;
+            --book: 'PT Serif', Georgia, 'Liberation Serif', serif;
+            --dialogue: var(--mono); --display: var(--pixel); --interface: var(--mono);
+            --dialogue-size: 1rem; --question-size: 1.06rem; --display-size: .91rem;
+            --answer-size: .88rem; --display-leading: 1.75; --dialogue-leading: 1.72;
+            --display-weight: 400; --dialogue-weight: 400; --interface-weight: 500;
+        }
+        html[data-type="pixel"] {
+            --dialogue:var(--pixel); --display:var(--pixel); --interface:var(--pixel);
+            --dialogue-size:.68rem; --question-size:.75rem; --display-size:.91rem;
+            --answer-size:.67rem; --dialogue-leading:2; --interface-weight:400;
+        }
+        html[data-type="terminal"] {
+            --dialogue:var(--mono); --display:var(--mono); --interface:var(--mono);
+            --dialogue-size:1rem; --question-size:1.08rem; --display-size:1.4rem;
+            --answer-size:.9rem; --display-weight:600; --dialogue-leading:1.65;
+        }
+        html[data-type="book"] {
+            --dialogue:var(--book); --display:var(--book); --interface:var(--mono);
+            --dialogue-size:1.14rem; --question-size:1.23rem; --display-size:1.65rem;
+            --answer-size:.9rem; --display-weight:700; --dialogue-leading:1.55;
+        }
+        body { font-family:var(--dialogue); }
+        #title-text,#result-house,#tie-title {
+            font-family:var(--display);font-size:var(--display-size);font-weight:var(--display-weight);
+            line-height:var(--display-leading);letter-spacing:0;overflow-wrap:anywhere;
+        }
+        #start-desc,#result-desc,#tie-breaker-text,#question-text {
+            font-family:var(--dialogue);font-size:var(--dialogue-size);
+            line-height:var(--dialogue-leading);font-weight:var(--dialogue-weight);
+        }
+        #question-text { font-size:var(--question-size); }
+        .btn-retro { font-family:var(--interface);font-size:var(--answer-size);font-weight:var(--interface-weight);line-height:1.55;overflow-wrap:anywhere; }
+        #question-counter,#verdict-prefix,.toolbar { font-family:var(--mono);font-size:.76rem;line-height:1.5; }
+        #btn-back {font-size:.73rem;}
+        #start-options {gap:.75rem;}
+        .font-control { display:flex;align-items:center;gap:.45rem;color:var(--accent); }
+        #font-select { font:inherit;color:var(--fg-color);background:var(--panel);border:1px solid var(--line);border-radius:0;padding:.43rem .4rem;max-width:100%; }
+        #font-select:focus-visible {outline:2px solid var(--accent);outline-offset:3px;}
+        html[data-type="book"] #title-text,html[data-type="book"] #result-house {letter-spacing:.025em;}
+        @media (max-width:767px) {
+            :root {--display-size:.85rem;--question-size:1rem;--dialogue-size:.96rem;--answer-size:.84rem;}
+            html[data-type="pixel"] {--display-size:.85rem;--question-size:.72rem;--dialogue-size:.66rem;--answer-size:.64rem;}
+            html[data-type="terminal"] {--display-size:1.24rem;--question-size:1rem;--dialogue-size:.96rem;--answer-size:.84rem;}
+            html[data-type="book"] {--display-size:1.45rem;--question-size:1.15rem;--dialogue-size:1.06rem;--answer-size:.84rem;}
+            .toolbar {justify-content:flex-end;}
+        }
+    </style>
+</head>
+<body>
+    <div class="crt-container w-full max-w-4xl mx-auto" id="main-container">
+        
+        <!-- Language Switcher -->
+        <div class="toolbar">
+            <label class="font-control" for="font-select"><span id="font-label">ШРИФТ</span>
+                <select id="font-select" onchange="setTypography(this.value)">
+                    <option value="hybrid">Гибрид</option>
+                    <option value="pixel">Пиксели</option>
+                    <option value="terminal">Терминал</option>
+                    <option value="book">Книжный</option>
+                </select>
+            </label>
+            <button onclick="changeLang('en')" class="lang-btn opacity-50 hover:opacity-100 transition-opacity text-[var(--fg-color)]" lang="en" data-lang="en">EN</button>
+            <button onclick="changeLang('uk')" class="lang-btn opacity-50 hover:opacity-100 transition-opacity text-[var(--fg-color)]" lang="uk" data-lang="uk">UA</button>
+            <button onclick="changeLang('ru')" class="lang-btn opacity-100 hover:opacity-100 transition-opacity text-[var(--fg-color)]" lang="ru" data-lang="ru">RU</button>
+            <button id="sound-toggle" class="sound-toggle" type="button" onclick="toggleSound()" aria-pressed="false">ЗВУК: ВЫКЛ</button>
+        </div>
+
+        <!-- НОВАЯ СТРУКТУРА: Две колонки (Слева - Шляпа и диалоги, Справа - Действия) -->
+        <div class="retro-box w-full mx-auto relative grid grid-cols-1 md:grid-cols-2 gap-8 min-h-[500px]">
+            
+            <!-- ЛЕВАЯ КОЛОНКА: Шляпа и Текст -->
+            <div class="flex flex-col items-center md:items-start border-b md:border-b-0 md:border-r border-dashed border-[var(--fg-color)] pb-8 md:pb-0 md:pr-8">
+                
+                <!-- Анимированная Шляпа -->
+                <div class="flex-shrink-0 flex justify-center w-full mb-8 mt-2">
+                    <svg id="sorting-hat-anim" class="pixel-art pixel-hat" viewBox="0 0 16 16" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Hat tip -->
+                        <rect x="7" y="2" width="2" height="1"/>
+                        <rect x="6" y="3" width="4" height="1"/>
+                        <rect x="5" y="4" width="4" height="2"/>
+                        <rect x="4" y="6" width="6" height="2"/>
+                        <!-- Hat face area -->
+                        <rect x="3" y="8" width="8" height="2"/>
+                        <rect x="2" y="10" width="10" height="2"/>
+                        <!-- Hat brim -->
+                        <rect x="1" y="12" width="14" height="2"/>
+                        
+                        <!-- Eyes -->
+                        <rect class="bg-rect" x="5" y="9" width="2" height="1"/>
+                        <rect class="bg-rect" x="9" y="9" width="2" height="1"/>
+                        
+                        <!-- Mouth Closed -->
+                        <rect class="bg-rect mouth-closed" x="5" y="11" width="6" height="1"/>
+                        
+                        <!-- Mouth Open -->
+                        <rect class="bg-rect mouth-open" x="4" y="10" width="8" height="2"/>
+                    </svg>
+                </div>
+
+                <!-- Контейнеры для диалогов Шляпы -->
+                <div class="w-full flex-grow flex flex-col">
+                    
+                    <!-- Экран Приветствия -->
+                    <div id="text-start" class="w-full flex flex-col">
+                        <h1 id="title-text" class="mb-4 uppercase text-center md:text-left">Распределение.exe</h1>
+                        <p id="start-desc" class="text-left leading-relaxed min-h-[120px]"></p>
+                    </div>
+
+                    <!-- Экран Вопросов -->
+                    <div id="text-quiz" class="w-full hidden flex-col">
+                        <div class="flex justify-between items-center mb-2 text-xs">
+                            <span id="question-counter">ВОПРОС: 01/XX</span>
+                        </div>
+                        <div class="health-bar-container mb-6">
+                            <div id="progress-bar" class="health-bar-fill transition-all duration-300 w-0"></div>
+                        </div>
+                        <h2 id="question-text" class="text-left leading-relaxed min-h-[150px]"></h2>
+                    </div>
+
+                    <!-- Экран Спорного Выбора -->
+                    <div id="text-tie" class="w-full hidden flex-col">
+                        <h2 id="tie-title" class="text-xl mb-4 uppercase text-left">! СИСТЕМНЫЙ СБОЙ !</h2>
+                        <p id="tie-breaker-text" class="text-sm leading-loose text-left min-h-[150px]"></p>
+                    </div>
+
+                    <!-- Экран Результата -->
+                    <div id="text-result" class="w-full hidden flex-col text-left">
+                        <p id="verdict-prefix" class="text-sm mb-2">> ВЕРДИКТ ВЫНЕСЕН...</p>
+                        <h1 id="result-house" class="mb-4 uppercase text-2xl">FAKULTET</h1>
+                        <div class="w-full h-1 border-t-2 border-dashed mb-4 border-[var(--fg-color)]"></div>
+                        <p id="result-desc" class="text-sm leading-loose min-h-[150px]"></p>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ПРАВАЯ КОЛОНКА: Кнопки и Ответы -->
+            <div class="flex flex-col justify-center items-center w-full min-h-[350px]">
+                
+                <!-- Кнопка Старта -->
+                <div id="start-options" class="w-full hidden flex-col gap-3 transition-opacity duration-300" inert>
+                    <button id="btn-start" onclick="startTest('short')" class="btn-retro py-4 px-6 w-full" disabled></button>
+                    <button id="btn-start-long" onclick="startTest('long')" class="btn-retro py-4 px-6 w-full" disabled></button>
+                </div>
+
+                <!-- Контейнер Ответов (Opacity используется чтобы не сдвигать макет) -->
+                <div id="answers-container" class="flex-col space-y-3 w-full hidden transition-opacity duration-300">
+                    <button id="ans-btn-0" onclick="handleAnswer(0)" class="btn-retro py-3 px-4">[ 1 ] Ни в коем разе</button>
+                    <button id="ans-btn-1" onclick="handleAnswer(1)" class="btn-retro py-3 px-4">[ 2 ] Скорее нет, чем да</button>
+                    <button id="ans-btn-2" onclick="handleAnswer(2)" class="btn-retro py-3 px-4">[ 3 ] Трудно судить</button>
+                    <button id="ans-btn-3" onclick="handleAnswer(3)" class="btn-retro py-3 px-4">[ 4 ] Скорее да, чем нет</button>
+                    <button id="ans-btn-4" onclick="handleAnswer(4)" class="btn-retro py-3 px-4">[ 5 ] Бесспорно так</button>
+                    
+                    <div class="flex justify-start mt-4 border-t border-dashed pt-4 border-[var(--fg-color)]">
+                        <button id="btn-back" onclick="goBack()" class="btn-retro py-2 px-4 text-xs opacity-0 pointer-events-none transition-opacity duration-300">
+                            < НАЗАД
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Кнопки выбора факультета при равном счете -->
+                <div id="tie-breaker-options" class="flex-col space-y-3 w-full hidden transition-opacity duration-300">
+                    <!-- Buttons injected here -->
+                </div>
+
+                <!-- Контейнер для маскота (появится в конце) -->
+                <div id="mascot-container" class="hidden flex-col items-center justify-center w-full mb-6 transition-opacity duration-500 opacity-0">
+                    <!-- Пиксельный SVG инжектится сюда -->
+                </div>
+
+                <!-- Кнопка Перезапуска -->
+                <button id="btn-restart" onclick="location.reload()" class="btn-retro py-4 px-6 w-full hidden transition-opacity duration-300">
+                    > СНЯТЬ ШЛЯПУ (ПОВТОРИТЬ)
+                </button>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentLang = 'ru';
+        let currentScreen = 'start';
+        let testMode = 'short'; 
+        let tiedHousesState = [];
+        let finalHouse = '';
+
+        const i18n = {
+    "title": {
+        "ru": "Распределение.exe",
+        "en": "Sorting.exe",
+        "uk": "Розподіл.exe"
+    },
+    "startShort": {"ru": "> КОРОТКИЙ ТЕСТ (40 ВОПРОСОВ)", "en": "> SHORT TEST (40 QUESTIONS)", "uk": "> КОРОТКИЙ ТЕСТ (40 ПИТАНЬ)"},
+    "startLong": {"ru": "> ДЛИННЫЙ ТЕСТ (80 ВОПРОСОВ)", "en": "> LONG TEST (80 QUESTIONS)", "uk": "> ДОВГИЙ ТЕСТ (80 ПИТАНЬ)"},
+    "startBtn": {
+        "ru": "> НАДЕТЬ ШЛЯПУ",
+        "en": "> PUT ON THE HAT",
+        "uk": "> НАДІТИ КАПЕЛЮХ"
+    },
+    "restartBtn": {
+        "ru": "> СНЯТЬ ШЛЯПУ (ЗАНОВО)",
+        "en": "> TAKE OFF THE HAT (RESTART)",
+        "uk": "> ЗНЯТИ КАПЕЛЮХ (СПОЧАТКУ)"
+    },
+    "backBtn": {
+        "ru": "< НАЗАД",
+        "en": "< BACK",
+        "uk": "< НАЗАД"
+    },
+    "questionPrefix": {
+        "ru": "ВОПРОС",
+        "en": "QUESTION",
+        "uk": "ПИТАННЯ"
+    },
+    "tieTitle": {
+        "ru": "! НЕПРОСТОЙ ВЫБОР !",
+        "en": "! A DIFFICULT CHOICE !",
+        "uk": "! НЕПРОСТИЙ ВИБІР !"
+    },
+    "tieBtnPrefix": {
+        "ru": "> ",
+        "en": "> ",
+        "uk": "> "
+    },
+    "verdictPrefix": {
+        "ru": "> РЕШЕНИЕ ПРИНЯТО...",
+        "en": "> THE HAT HAS DECIDED...",
+        "uk": "> РІШЕННЯ УХВАЛЕНО..."
+    },
+    "calculating": {
+        "ru": "РАЗМЫШЛЯЮ...",
+        "en": "THINKING...",
+        "uk": "РОЗМІРКОВУЮ..."
+    },
+    "thinking": {
+        "ru": "> Хм-м... Дай-ка подумать...\n> Любопытно...\n> Непростой выбор...",
+        "en": "> Hmm... Let me think...\n> Most interesting...\n> Not an easy choice...",
+        "uk": "> Хм-м... Дай-но подумати...\n> Цікаво...\n> Непростий вибір..."
+    },
+    "startDesc": {
+        "ru": "> Хм-м... Кто это у нас?\n> Садись. Посмотрим, что таится у тебя в голове.\n\n> Впереди 80 вопросов. Оценивай свои ценности и привычное поведение, а не то, каким принято быть. Если ситуация тебе незнакома, представь, как обычно поступаешь в похожих обстоятельствах.",
+        "en": "> Hmm... Who have we here?\n> Take a seat. Let us see what lies within that head of yours.\n\n> There are 80 questions. Consider your own values and typical behaviour, not what others expect of you. If a situation is unfamiliar, think of how you usually act in similar circumstances.",
+        "uk": "> Хм-м... Хто це в нас?\n> Сідай. Погляньмо, що ховається у твоїй голові.\n\n> Попереду 80 запитань. Оцінюй власні цінності й звичну поведінку, а не те, яким слід бути. Якщо ситуація незнайома, уяви, як зазвичай дієш за схожих обставин."
+    },
+    "tieDesc": {
+        "ru": "> Вот уж непростая задача!\n> Несколько факультетов подходят тебе в равной мере.\n\n> Что ж, а куда хотелось бы попасть тебе?",
+        "en": "> Now this is a tricky one!\n> More than one house suits you equally well.\n\n> Well, where would you rather go?",
+        "uk": "> Оце так завдання!\n> Кілька гуртожитків підходять тобі однаковою мірою.\n\n> Що ж, а куди хотілося б потрапити тобі?"
+    },
+    "answers": {
+        "0": {
+            "ru": "[ 1 ] Определённо нет",
+            "en": "[ 1 ] Definitely not",
+            "uk": "[ 1 ] Однозначно ні"
+        },
+        "1": {
+            "ru": "[ 2 ] Скорее нет",
+            "en": "[ 2 ] Probably not",
+            "uk": "[ 2 ] Радше ні"
+        },
+        "2": {
+            "ru": "[ 3 ] Трудно сказать",
+            "en": "[ 3 ] Not sure",
+            "uk": "[ 3 ] Важко сказати"
+        },
+        "3": {
+            "ru": "[ 4 ] Скорее да",
+            "en": "[ 4 ] Probably yes",
+            "uk": "[ 4 ] Радше так"
+        },
+        "4": {
+            "ru": "[ 5 ] Определённо да",
+            "en": "[ 5 ] Definitely yes",
+            "uk": "[ 5 ] Однозначно так"
+        }
+    },
+    "houses": {
+        "G": {
+            "ru": "ГРИФФИНДОР",
+            "en": "GRYFFINDOR",
+            "uk": "ҐРИФІНДОР"
+        },
+        "S": {
+            "ru": "СЛИЗЕРИН",
+            "en": "SLYTHERIN",
+            "uk": "СЛИЗЕРИН"
+        },
+        "R": {
+            "ru": "КОГТЕВРАН",
+            "en": "RAVENCLAW",
+            "uk": "РЕЙВЕНКЛОВ"
+        },
+        "H": {
+            "ru": "ПУФФЕНДУЙ",
+            "en": "HUFFLEPUFF",
+            "uk": "ГАФЕЛПАФ"
+        }
+    },
+    "descriptions": {
+        "G": {
+            "ru": "> Хм-м... В тебе есть отвага и решимость. Ты ценишь готовность действовать, даже когда страшно, и не любишь оставаться в стороне. Только смотри, чтобы смелость не обернулась безрассудством.",
+            "en": "> Hmm... Courage and determination. You value acting in spite of fear, and you would rather not stand idly by. Just take care that courage does not turn into recklessness.",
+            "uk": "> Хм-м... У тобі є відвага й рішучість. Ти цінуєш готовність діяти, навіть коли страшно, і не любиш залишатися осторонь. Тільки пильнуй, щоб сміливість не обернулася нерозважливістю."
+        },
+        "S": {
+            "ru": "> Ага... Амбиции, расчёт и находчивость. Ты предпочитаешь искать собственный путь и не упускать возможности. Только не забывай, что не всякая победа стоит своей цены.",
+            "en": "> Ah... Ambition, strategy and resourcefulness. You prefer to find your own way and make the most of opportunities. Just remember that not every victory is worth its price.",
+            "uk": "> Ага... Амбіції, розважливість і винахідливість. Ти волієш шукати власний шлях і не марнувати нагод. Тільки пам’ятай, що не кожна перемога варта своєї ціни."
+        },
+        "R": {
+            "ru": "> Любопытный ум! Тебе важно понимать, задавать вопросы и мыслить самостоятельно. Только не позволяй бесконечным размышлениям мешать тебе действовать.",
+            "en": "> An inquisitive mind! Understanding, asking questions and thinking for yourself matter to you. Just do not let endless pondering get in the way of action.",
+            "uk": "> Допитливий розум! Тобі важливо розуміти, ставити запитання й мислити самостійно. Тільки не дозволяй нескінченним роздумам заважати тобі діяти."
+        },
+        "H": {
+            "ru": "> Вижу упорство, преданность и чувство справедливости. Ты ценишь надёжность и работу, которую не всегда замечают. Только помни, что справедливого отношения заслуживаешь и ты.",
+            "en": "> I see perseverance, loyalty and a sense of fairness. You value reliability and work that may go unnoticed. Just remember that you deserve fair treatment, too.",
+            "uk": "> Бачу наполегливість, відданість і почуття справедливості. Ти цінуєш надійність і працю, яку не завжди помічають. Тільки пам’ятай, що й ти заслуговуєш на справедливе ставлення."
+        }
+    },
+    "soundOn": {
+        "ru": "ЗВУК: ВКЛ",
+        "en": "SOUND: ON",
+        "uk": "ЗВУК: УВІМК"
+    },
+    "soundOff": {
+        "ru": "ЗВУК: ВЫКЛ",
+        "en": "SOUND: OFF",
+        "uk": "ЗВУК: ВИМК"
+    },
+    "soundHint": {
+        "ru": "Игровой голос Шляпы",
+        "en": "The Hat’s retro voice",
+        "uk": "Ігровий голос Сортувального Капелюха"
+    },
+    "answerScales": {
+        "value": [
+            {
+                "ru": "[ 1 ] Совсем не важно",
+                "en": "[ 1 ] Not at all important",
+                "uk": "[ 1 ] Зовсім не важливо"
+            },
+            {
+                "ru": "[ 2 ] Мало важно",
+                "en": "[ 2 ] Slightly important",
+                "uk": "[ 2 ] Мало важливо"
+            },
+            {
+                "ru": "[ 3 ] Умеренно важно",
+                "en": "[ 3 ] Moderately important",
+                "uk": "[ 3 ] Помірно важливо"
+            },
+            {
+                "ru": "[ 4 ] Довольно важно",
+                "en": "[ 4 ] Quite important",
+                "uk": "[ 4 ] Досить важливо"
+            },
+            {
+                "ru": "[ 5 ] Очень важно",
+                "en": "[ 5 ] Very important",
+                "uk": "[ 5 ] Дуже важливо"
+            }
+        ],
+        "behaviour": [
+            {
+                "ru": "[ 1 ] Совсем не свойственно",
+                "en": "[ 1 ] Not at all typical",
+                "uk": "[ 1 ] Зовсім не властиво"
+            },
+            {
+                "ru": "[ 2 ] Мало свойственно",
+                "en": "[ 2 ] Slightly typical",
+                "uk": "[ 2 ] Мало властиво"
+            },
+            {
+                "ru": "[ 3 ] Умеренно свойственно",
+                "en": "[ 3 ] Moderately typical",
+                "uk": "[ 3 ] Помірно властиво"
+            },
+            {
+                "ru": "[ 4 ] Довольно свойственно",
+                "en": "[ 4 ] Quite typical",
+                "uk": "[ 4 ] Досить властиво"
+            },
+            {
+                "ru": "[ 5 ] Очень свойственно",
+                "en": "[ 5 ] Very typical",
+                "uk": "[ 5 ] Дуже властиво"
+            }
+        ]
+    }
+};
+
+
+        const typographyLabels = {
+            ru: ['ШРИФТ','Гибрид','Пиксели','Терминал','Книжный'],
+            en: ['FONT','Hybrid','Pixel','Terminal','Book'],
+            uk: ['ШРИФТ','Гібрид','Пікселі','Термінал','Книжковий']
+        };
+        function setTypography(preset) {
+            if (!['hybrid','pixel','terminal','book'].includes(preset)) preset = 'hybrid';
+            document.documentElement.dataset.type = preset;
+            document.getElementById('font-select').value = preset;
+            try { localStorage.setItem('sorting-hat-typography', preset); } catch (_) {}
+        }
+        function updateTypographyLabels() {
+            const [label,...names] = typographyLabels[currentLang];
+            document.getElementById('font-label').textContent = label;
+            [...document.getElementById('font-select').options].forEach((option,i) => option.textContent = names[i]);
+        }
+        function initTypography() {
+            let preset = 'hybrid';
+            try { preset = localStorage.getItem('sorting-hat-typography') || preset; } catch (_) {}
+            setTypography(preset);
+            updateTypographyLabels();
+        }
+
+        function changeLang(lang) {
+            if (currentLang === lang) return;
+            currentLang = lang;
+            document.documentElement.lang = lang;
+            updateTypographyLabels();
+            updateSoundButton();
+            
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.style.opacity = btn.dataset.lang === lang ? '1' : '0.5';
+            });
+
+            document.getElementById('title-text').textContent = i18n.title[lang];
+            updateModeLabels();
+            document.getElementById('btn-restart').textContent = i18n.restartBtn[lang];
+            document.getElementById('btn-back').textContent = i18n.backBtn[lang];
+
+            
+            document.getElementById('verdict-prefix').textContent = i18n.verdictPrefix[lang];
+            document.getElementById('tie-title').textContent = i18n.tieTitle[lang];
+
+            if (currentScreen === 'start') {
+                const text = i18n.startDesc[lang];
+                if (isTyping) typeWriter('start-desc', text, 30, onTypeComplete);
+                else setTypedText(document.getElementById('start-desc'), text);
+            } else if (currentScreen === 'quiz') {
+                updateQuestionUI();
+                const text = `> ${questions[currentQuestionIndex].text[lang]}`;
+                if (isTyping) typeWriter('question-text', text, testMode === 'short' ? 30 : 18, onTypeComplete);
+                else setTypedText(document.getElementById('question-text'), text);
+            } else if (currentScreen === 'calculating') {
+                document.getElementById('question-counter').textContent = i18n.calculating[lang];
+                const text = i18n.thinking[lang];
+                if (isTyping) typeWriter('question-text', text, 40, onTypeComplete);
+                else setTypedText(document.getElementById('question-text'), text);
+            } else if (currentScreen === 'tie') {
+                renderTieOptions(tiedHousesState);
+                const text = i18n.tieDesc[lang];
+                if (isTyping) typeWriter('tie-breaker-text', text, 30, onTypeComplete);
+                else setTypedText(document.getElementById('tie-breaker-text'), text);
+            } else if (currentScreen === 'result') {
+                document.getElementById('result-house').textContent = i18n.houses[finalHouse][lang];
+                const text = i18n.descriptions[finalHouse][lang];
+                if (isTyping) typeWriter('result-desc', text, 40, onTypeComplete);
+                else setTypedText(document.getElementById('result-desc'), text);
+            }
+        }
+
+        // Fan-made content blueprint: 4 houses × 4 facets × 5 items.
+        // Per facet: 2 values, 3 self-reported behavioural tendencies.
+        // No empirical validation; scores are not clinical measures or probabilities.
+        const longQuestions = [
+    {
+        "text": {
+            "ru": "Насколько для тебя важно действовать, несмотря на страх, когда дело того стоит?",
+            "en": "How important is it to you to act despite fear when the cause is worth it?",
+            "uk": "Наскільки для тебе важливо діяти попри страх, коли справа того варта?"
+        },
+        "house": "G",
+        "facet": "courage",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно учиться справляться со страхом, а не просто избегать его?",
+            "en": "How important is it to you to learn to face fear rather than simply avoid it?",
+            "uk": "Наскільки для тебе важливо вчитися долати страх, а не просто уникати його?"
+        },
+        "house": "G",
+        "facet": "courage",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно браться за посильное дело, даже когда оно тебя пугает?",
+            "en": "How typical is it of you to take on a manageable task even when it frightens you?",
+            "uk": "Наскільки тобі властиво братися за посильну справу, навіть коли вона тебе лякає?"
+        },
+        "house": "G",
+        "facet": "courage",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно сохранять готовность действовать, когда ты сильно волнуешься?",
+            "en": "How typical is it of you to remain willing to act when you are very nervous?",
+            "uk": "Наскільки тобі властиво зберігати готовність діяти, коли ти сильно хвилюєшся?"
+        },
+        "house": "G",
+        "facet": "courage",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно отказываться от желанного дела из-за страха, даже если риск невелик?",
+            "en": "How typical is it of you to give up on something you want out of fear, even when the risk is small?",
+            "uk": "Наскільки тобі властиво відмовлятися від бажаної справи через страх, навіть якщо ризик невеликий?"
+        },
+        "house": "G",
+        "facet": "courage",
+        "kind": "behaviour",
+        "reverse": true
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно позволять себе смелые начинания, даже если успех не гарантирован?",
+            "en": "How important is it to you to allow yourself bold undertakings even when success is not guaranteed?",
+            "uk": "Наскільки для тебе важливо дозволяти собі сміливі починання, навіть якщо успіх не гарантований?"
+        },
+        "house": "G",
+        "facet": "daring",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно испытывать себя в непривычных обстоятельствах?",
+            "en": "How important is it to you to test yourself in unfamiliar circumstances?",
+            "uk": "Наскільки для тебе важливо випробовувати себе в незвичних обставинах?"
+        },
+        "house": "G",
+        "facet": "daring",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно выбирать более смелый из двух приемлемых путей ради самого вызова?",
+            "en": "How typical is it of you to choose the bolder of two reasonable paths for the challenge itself?",
+            "uk": "Наскільки тобі властиво обирати сміливіший із двох прийнятних шляхів заради самого виклику?"
+        },
+        "house": "G",
+        "facet": "daring",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно с энтузиазмом принимать возможность сделать что-то, на что раньше не решался?",
+            "en": "How typical is it of you to welcome the chance to do something you have not dared to do before?",
+            "uk": "Наскільки тобі властиво з ентузіазмом приймати нагоду зробити те, на що раніше бракувало сміливості?"
+        },
+        "house": "G",
+        "facet": "daring",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно соглашаться на новые задачи, требующие выйти за пределы привычного?",
+            "en": "How typical is it of you to accept new challenges that take you beyond what is familiar?",
+            "uk": "Наскільки тобі властиво погоджуватися на нові завдання, що вимагають вийти за межі звичного?"
+        },
+        "house": "G",
+        "facet": "daring",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно открыто отстаивать убеждения, даже если это может стоить расположения окружающих?",
+            "en": "How important is it to you to stand up openly for your convictions even if it may cost you others’ approval?",
+            "uk": "Наскільки для тебе важливо відкрито обстоювати переконання, навіть якщо це може коштувати прихильності інших?"
+        },
+        "house": "G",
+        "facet": "moral_courage",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно выступать против злоупотребления властью, даже если лично тебя оно не касается?",
+            "en": "How important is it to you to speak out against an abuse of power even when it does not affect you personally?",
+            "uk": "Наскільки для тебе важливо виступати проти зловживання владою, навіть якщо воно не стосується тебе особисто?"
+        },
+        "house": "G",
+        "facet": "moral_courage",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно возражать влиятельному человеку, когда его решение кажется тебе принципиально неверным?",
+            "en": "How typical is it of you to challenge an influential person when you believe their decision is fundamentally wrong?",
+            "uk": "Наскільки тобі властиво заперечувати впливовій людині, коли її рішення здається тобі принципово хибним?"
+        },
+        "house": "G",
+        "facet": "moral_courage",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно вмешиваться безопасным способом, когда кого-то публично унижают?",
+            "en": "How typical is it of you to intervene in a safe way when someone is being publicly humiliated?",
+            "uk": "Наскільки тобі властиво втручатися в безпечний спосіб, коли когось публічно принижують?"
+        },
+        "house": "G",
+        "facet": "moral_courage",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно скрывать своё несогласие преимущественно из страха вызвать неодобрение?",
+            "en": "How typical is it of you to hide your disagreement mainly for fear of disapproval?",
+            "uk": "Наскільки тобі властиво приховувати свою незгоду переважно через страх осуду?"
+        },
+        "house": "G",
+        "facet": "moral_courage",
+        "kind": "behaviour",
+        "reverse": true
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно брать на себя инициативу в ситуации, где все колеблются?",
+            "en": "How important is it to you to take the initiative in a situation where everyone is hesitating?",
+            "uk": "Наскільки для тебе важливо брати на себе ініціативу в ситуації, коли всі вагаються?"
+        },
+        "house": "G",
+        "facet": "decisiveness",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно принимать на себя ответственность за трудное решение?",
+            "en": "How important is it to you to take responsibility for a difficult decision?",
+            "uk": "Наскільки для тебе важливо брати на себе відповідальність за складне рішення?"
+        },
+        "house": "G",
+        "facet": "decisiveness",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно принимать решение в условиях неопределённости, если ждать уже нельзя?",
+            "en": "How typical is it of you to make a decision amid uncertainty when waiting is no longer an option?",
+            "uk": "Наскільки тобі властиво ухвалювати рішення в умовах невизначеності, якщо чекати вже не можна?"
+        },
+        "house": "G",
+        "facet": "decisiveness",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно делать первый шаг, когда другие ещё не готовы начать?",
+            "en": "How typical is it of you to make the first move when others are not yet ready to begin?",
+            "uk": "Наскільки тобі властиво робити перший крок, коли інші ще не готові почати?"
+        },
+        "house": "G",
+        "facet": "decisiveness",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно быстро переходить от обдумывания к действию, когда информации уже достаточно?",
+            "en": "How typical is it of you to move promptly from thought to action once you have enough information?",
+            "uk": "Наскільки тобі властиво швидко переходити від обмірковування до дії, коли інформації вже достатньо?"
+        },
+        "house": "G",
+        "facet": "decisiveness",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно ставить перед собой цели, которые значительно превосходят уже достигнутое?",
+            "en": "How important is it to you to set yourself goals that go well beyond what you have already achieved?",
+            "uk": "Наскільки для тебе важливо ставити перед собою цілі, що значно перевищують уже досягнуте?"
+        },
+        "house": "S",
+        "facet": "ambition",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно добиваться выдающихся результатов в выбранной области?",
+            "en": "How important is it to you to achieve outstanding results in your chosen field?",
+            "uk": "Наскільки для тебе важливо досягати визначних результатів в обраній галузі?"
+        },
+        "house": "S",
+        "facet": "ambition",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно после достижения цели искать следующую, более значительную?",
+            "en": "How typical is it of you to look for a more substantial goal after achieving one?",
+            "uk": "Наскільки тобі властиво після досягнення цілі шукати наступну, вагомішу?"
+        },
+        "house": "S",
+        "facet": "ambition",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно выбирать возможность для дальнейшего роста вместо более удобного, но бесперспективного варианта?",
+            "en": "How typical is it of you to choose an opportunity for further advancement over a more comfortable dead end?",
+            "uk": "Наскільки тобі властиво обирати нагоду для подальшого зростання замість зручнішого, але безперспективного варіанта?"
+        },
+        "house": "S",
+        "facet": "ambition",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно довольствоваться достигнутым положением, даже когда дальнейший рост вполне возможен?",
+            "en": "How typical is it of you to be content with your current position even when further advancement is quite possible?",
+            "uk": "Наскільки тобі властиво задовольнятися досягнутим становищем, навіть коли подальше зростання цілком можливе?"
+        },
+        "house": "S",
+        "facet": "ambition",
+        "kind": "behaviour",
+        "reverse": true
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно рассчитывать свои шаги с учётом отдалённых последствий?",
+            "en": "How important is it to you to plan your moves with their long-term consequences in mind?",
+            "uk": "Наскільки для тебе важливо розраховувати свої кроки з огляду на віддалені наслідки?"
+        },
+        "house": "S",
+        "facet": "strategy",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно выбирать эффективный путь к цели, даже если он менее эффектен со стороны?",
+            "en": "How important is it to you to choose an effective route to a goal even if it looks less impressive to others?",
+            "uk": "Наскільки для тебе важливо обирати ефективний шлях до мети, навіть якщо він менш ефектний на вигляд?"
+        },
+        "house": "S",
+        "facet": "strategy",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно перед важным разговором продумывать вероятные реакции собеседника?",
+            "en": "How typical is it of you to consider the other person’s likely reactions before an important conversation?",
+            "uk": "Наскільки тобі властиво перед важливою розмовою обмірковувати ймовірні реакції співрозмовника?"
+        },
+        "house": "S",
+        "facet": "strategy",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно откладывать желаемый результат до более выгодного момента?",
+            "en": "How typical is it of you to delay a desired outcome until a more advantageous moment?",
+            "uk": "Наскільки тобі властиво відкладати бажаний результат до сприятливішого моменту?"
+        },
+        "house": "S",
+        "facet": "strategy",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно заранее решать, какую информацию о своих планах стоит раскрывать?",
+            "en": "How typical is it of you to decide in advance how much to reveal about your plans?",
+            "uk": "Наскільки тобі властиво заздалегідь вирішувати, яку інформацію про свої плани варто розкривати?"
+        },
+        "house": "S",
+        "facet": "strategy",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно уметь добиваться своего при ограниченных ресурсах?",
+            "en": "How important is it to you to be able to achieve your aims with limited resources?",
+            "uk": "Наскільки для тебе важливо уміти досягати свого за обмежених ресурсів?"
+        },
+        "house": "S",
+        "facet": "resourcefulness",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно превращать неблагоприятные обстоятельства в новые возможности?",
+            "en": "How important is it to you to turn unfavourable circumstances into new opportunities?",
+            "uk": "Наскільки для тебе важливо перетворювати несприятливі обставини на нові можливості?"
+        },
+        "house": "S",
+        "facet": "resourcefulness",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно искать обходной путь к цели, когда привычный способ перестаёт работать?",
+            "en": "How typical is it of you to look for an alternative route to a goal when the usual approach stops working?",
+            "uk": "Наскільки тобі властиво шукати обхідний шлях до мети, коли звичний спосіб перестає працювати?"
+        },
+        "house": "S",
+        "facet": "resourcefulness",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно замечать, какие возможности можно извлечь из неожиданного изменения обстоятельств?",
+            "en": "How typical is it of you to spot opportunities in an unexpected change of circumstances?",
+            "uk": "Наскільки тобі властиво помічати можливості, що виникають унаслідок несподіваної зміни обставин?"
+        },
+        "house": "S",
+        "facet": "resourcefulness",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно находить взаимовыгодные договорённости, позволяющие продвинуться к цели?",
+            "en": "How typical is it of you to find mutually beneficial arrangements that help you towards a goal?",
+            "uk": "Наскільки тобі властиво знаходити взаємовигідні домовленості, що допомагають наблизитися до мети?"
+        },
+        "house": "S",
+        "facet": "resourcefulness",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно самостоятельно определять направление своей жизни?",
+            "en": "How important is it to you to determine the direction of your own life?",
+            "uk": "Наскільки для тебе важливо самостійно визначати напрям свого життя?"
+        },
+        "house": "S",
+        "facet": "agency",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно иметь достаточно влияния на обстоятельства, чтобы воплощать собственные планы?",
+            "en": "How important is it to you to have enough influence over circumstances to carry out your own plans?",
+            "uk": "Наскільки для тебе важливо мати достатній вплив на обставини, щоб утілювати власні плани?"
+        },
+        "house": "S",
+        "facet": "agency",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно искать способы уменьшить зависимость своих планов от чужих решений?",
+            "en": "How typical is it of you to look for ways to make your plans less dependent on other people’s decisions?",
+            "uk": "Наскільки тобі властиво шукати способи зменшити залежність своїх планів від чужих рішень?"
+        },
+        "house": "S",
+        "facet": "agency",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно отстаивать собственные интересы в переговорах?",
+            "en": "How typical is it of you to assert your own interests in negotiations?",
+            "uk": "Наскільки тобі властиво обстоювати власні інтереси під час переговорів?"
+        },
+        "house": "S",
+        "facet": "agency",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно предпочитать, чтобы другие определяли твои долгосрочные цели?",
+            "en": "How typical is it of you to prefer other people to determine your long-term goals?",
+            "uk": "Наскільки тобі властиво віддавати перевагу тому, щоб інші визначали твої довгострокові цілі?"
+        },
+        "house": "S",
+        "facet": "agency",
+        "kind": "behaviour",
+        "reverse": true
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно узнавать новое, даже если это не принесёт практической пользы?",
+            "en": "How important is it to you to learn new things even if they have no practical use?",
+            "uk": "Наскільки для тебе важливо дізнаватися нове, навіть якщо це не принесе практичної користі?"
+        },
+        "house": "R",
+        "facet": "curiosity",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно сохранять интерес к вопросам, ответы на которые пока неизвестны?",
+            "en": "How important is it to you to remain interested in questions whose answers are not yet known?",
+            "uk": "Наскільки для тебе важливо зберігати інтерес до запитань, відповіді на які поки невідомі?"
+        },
+        "house": "R",
+        "facet": "curiosity",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно самостоятельно разыскивать сведения о случайно заинтересовавшей тебя теме?",
+            "en": "How typical is it of you to look up a subject that has unexpectedly caught your interest?",
+            "uk": "Наскільки тобі властиво самостійно шукати відомості про тему, яка випадково тебе зацікавила?"
+        },
+        "house": "R",
+        "facet": "curiosity",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно погружаться в незнакомую область просто из любопытства?",
+            "en": "How typical is it of you to explore an unfamiliar field simply out of curiosity?",
+            "uk": "Наскільки тобі властиво занурюватися в незнайому галузь просто з цікавості?"
+        },
+        "house": "R",
+        "facet": "curiosity",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно терять интерес к новой теме, как только становится ясно, что она не пригодится на практике?",
+            "en": "How typical is it of you to lose interest in a new subject as soon as it seems to have no practical use?",
+            "uk": "Наскільки тобі властиво втрачати інтерес до нової теми, щойно стає зрозуміло, що вона не знадобиться на практиці?"
+        },
+        "house": "R",
+        "facet": "curiosity",
+        "kind": "behaviour",
+        "reverse": true
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно предпочитать обоснованный вывод приятному, но недоказанному объяснению?",
+            "en": "How important is it to you to prefer a well-supported conclusion to a comforting but unsubstantiated explanation?",
+            "uk": "Наскільки для тебе важливо віддавати перевагу обґрунтованому висновку перед приємним, але недоведеним поясненням?"
+        },
+        "house": "R",
+        "facet": "critical_thinking",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно пересматривать собственные убеждения, когда появляются убедительные новые сведения?",
+            "en": "How important is it to you to revise your own beliefs when convincing new evidence emerges?",
+            "uk": "Наскільки для тебе важливо переглядати власні переконання, коли з’являються переконливі нові відомості?"
+        },
+        "house": "R",
+        "facet": "critical_thinking",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно проверять основания утверждения, которое кажется правдоподобным?",
+            "en": "How typical is it of you to check the basis of a claim that seems plausible?",
+            "uk": "Наскільки тобі властиво перевіряти підстави твердження, яке здається правдоподібним?"
+        },
+        "house": "R",
+        "facet": "critical_thinking",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно искать альтернативные объяснения, прежде чем остановиться на одном?",
+            "en": "How typical is it of you to look for alternative explanations before settling on one?",
+            "uk": "Наскільки тобі властиво шукати альтернативні пояснення, перш ніж зупинитися на одному?"
+        },
+        "house": "R",
+        "facet": "critical_thinking",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно принимать убедительно звучащее объяснение, не задумываясь о его основаниях?",
+            "en": "How typical is it of you to accept a convincing-sounding explanation without considering what supports it?",
+            "uk": "Наскільки тобі властиво приймати переконливе на слух пояснення, не замислюючись над його підставами?"
+        },
+        "house": "R",
+        "facet": "critical_thinking",
+        "kind": "behaviour",
+        "reverse": true
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно сохранять независимость суждений, даже если твоё мнение непопулярно?",
+            "en": "How important is it to you to maintain independence of judgement even if your opinion is unpopular?",
+            "uk": "Наскільки для тебе важливо зберігати незалежність суджень, навіть якщо твоя думка непопулярна?"
+        },
+        "house": "R",
+        "facet": "originality",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно давать простор необычным идеям, даже когда их польза ещё не очевидна?",
+            "en": "How important is it to you to give unusual ideas room to develop even when their usefulness is not yet obvious?",
+            "uk": "Наскільки для тебе важливо давати простір незвичним ідеям, навіть коли їхня користь ще не очевидна?"
+        },
+        "house": "R",
+        "facet": "originality",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно пробовать иной подход к задаче ради интереса, даже если обычный уже работает?",
+            "en": "How typical is it of you to try a different approach to a problem out of interest even when the usual one works?",
+            "uk": "Наскільки тобі властиво випробовувати інший підхід до завдання з цікавості, навіть якщо звичний уже працює?"
+        },
+        "house": "R",
+        "facet": "originality",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно замечать неожиданные связи между идеями из разных областей?",
+            "en": "How typical is it of you to notice unexpected connections between ideas from different fields?",
+            "uk": "Наскільки тобі властиво помічати несподівані зв’язки між ідеями з різних галузей?"
+        },
+        "house": "R",
+        "facet": "originality",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно придумывать несколько совершенно разных трактовок одной и той же идеи?",
+            "en": "How typical is it of you to come up with several quite different interpretations of the same idea?",
+            "uk": "Наскільки тобі властиво вигадувати кілька зовсім різних тлумачень тієї самої ідеї?"
+        },
+        "house": "R",
+        "facet": "originality",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно глубоко понимать предмет, а не просто знать правильный ответ?",
+            "en": "How important is it to you to understand a subject deeply rather than merely know the right answer?",
+            "uk": "Наскільки для тебе важливо глибоко розуміти предмет, а не просто знати правильну відповідь?"
+        },
+        "house": "R",
+        "facet": "understanding",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно расширять свои знания независимо от внешней оценки?",
+            "en": "How important is it to you to expand your knowledge regardless of external recognition?",
+            "uk": "Наскільки для тебе важливо розширювати свої знання незалежно від зовнішньої оцінки?"
+        },
+        "house": "R",
+        "facet": "understanding",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно разбираться в принципе действия вещи, даже если уже умеешь ею пользоваться?",
+            "en": "How typical is it of you to work out how something functions even when you already know how to use it?",
+            "uk": "Наскільки тобі властиво розбиратися в принципі дії речі, навіть якщо вже вмієш нею користуватися?"
+        },
+        "house": "R",
+        "facet": "understanding",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно возвращаться к сложной идее, пока не поймёшь её смысл?",
+            "en": "How typical is it of you to return to a difficult idea until you understand its meaning?",
+            "uk": "Наскільки тобі властиво повертатися до складної ідеї, доки не зрозумієш її змісту?"
+        },
+        "house": "R",
+        "facet": "understanding",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно искать общую закономерность за отдельными фактами?",
+            "en": "How typical is it of you to look for a general pattern behind individual facts?",
+            "uk": "Наскільки тобі властиво шукати загальну закономірність за окремими фактами?"
+        },
+        "house": "R",
+        "facet": "understanding",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно добросовестно выполнять работу, даже если никто её не оценит?",
+            "en": "How important is it to you to do your work conscientiously even if nobody will recognise it?",
+            "uk": "Наскільки для тебе важливо сумлінно виконувати роботу, навіть якщо ніхто її не оцінить?"
+        },
+        "house": "H",
+        "facet": "diligence",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно ценить усилия, вложенные в дело, независимо от внешнего блеска результата?",
+            "en": "How important is it to you to value the effort put into something regardless of how impressive the result looks?",
+            "uk": "Наскільки для тебе важливо цінувати зусилля, вкладені у справу, незалежно від зовнішньої ефектності результату?"
+        },
+        "house": "H",
+        "facet": "diligence",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно доводить до конца необходимые, но неинтересные задачи?",
+            "en": "How typical is it of you to finish necessary but uninteresting tasks?",
+            "uk": "Наскільки тобі властиво доводити до кінця необхідні, але нецікаві завдання?"
+        },
+        "house": "H",
+        "facet": "diligence",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно регулярно выполнять свою часть работы, даже когда первоначальный энтузиазм прошёл?",
+            "en": "How typical is it of you to keep doing your share of the work after the initial enthusiasm has faded?",
+            "uk": "Наскільки тобі властиво регулярно виконувати свою частину роботи, навіть коли початковий ентузіазм минув?"
+        },
+        "house": "H",
+        "facet": "diligence",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно оставлять необходимую работу незавершённой, когда она становится однообразной?",
+            "en": "How typical is it of you to leave necessary work unfinished when it becomes repetitive?",
+            "uk": "Наскільки тобі властиво залишати необхідну роботу незавершеною, коли вона стає одноманітною?"
+        },
+        "house": "H",
+        "facet": "diligence",
+        "kind": "behaviour",
+        "reverse": true
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно оставаться надёжным для близких людей, даже когда это неудобно?",
+            "en": "How important is it to you to remain dependable to those close to you even when it is inconvenient?",
+            "uk": "Наскільки для тебе важливо залишатися надійною опорою для близьких людей, навіть коли це незручно?"
+        },
+        "house": "H",
+        "facet": "loyalty",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно беречь доверие людей, которые на тебя рассчитывают?",
+            "en": "How important is it to you to honour the trust of people who rely on you?",
+            "uk": "Наскільки для тебе важливо берегти довіру людей, які на тебе розраховують?"
+        },
+        "house": "H",
+        "facet": "loyalty",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно выполнять взятые на себя обязательства, даже если появился более привлекательный вариант?",
+            "en": "How typical is it of you to keep your commitments even when a more appealing alternative appears?",
+            "uk": "Наскільки тобі властиво виконувати взяті на себе зобов’язання, навіть якщо з’явився привабливіший варіант?"
+        },
+        "house": "H",
+        "facet": "loyalty",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно поддерживать близкого человека в длительный трудный период, а не только в момент кризиса?",
+            "en": "How typical is it of you to support someone close to you throughout a difficult period, not merely at the moment of crisis?",
+            "uk": "Наскільки тобі властиво підтримувати близьку людину протягом тривалого складного періоду, а не лише в момент кризи?"
+        },
+        "house": "H",
+        "facet": "loyalty",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно помнить о договорённостях, которые имеют значение для других людей?",
+            "en": "How typical is it of you to remember arrangements that matter to other people?",
+            "uk": "Наскільки тобі властиво пам’ятати про домовленості, важливі для інших людей?"
+        },
+        "house": "H",
+        "facet": "loyalty",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно применять одинаковые критерии к людям независимо от личной симпатии?",
+            "en": "How important is it to you to apply the same standards to people regardless of personal liking?",
+            "uk": "Наскільки для тебе важливо застосовувати однакові критерії до людей незалежно від особистої симпатії?"
+        },
+        "house": "H",
+        "facet": "fairness",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно признавать вклад каждого, даже если работа человека малозаметна?",
+            "en": "How important is it to you to acknowledge everyone’s contribution even when their work is inconspicuous?",
+            "uk": "Наскільки для тебе важливо визнавати внесок кожного, навіть якщо праця людини малопомітна?"
+        },
+        "house": "H",
+        "facet": "fairness",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно учитывать интересы всех участников при распределении общей нагрузки?",
+            "en": "How typical is it of you to consider everyone’s interests when dividing a shared workload?",
+            "uk": "Наскільки тобі властиво враховувати інтереси всіх учасників під час розподілу спільного навантаження?"
+        },
+        "house": "H",
+        "facet": "fairness",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно оценивать незнакомого человека по его поступкам, а не по положению в группе?",
+            "en": "How typical is it of you to judge an unfamiliar person by their actions rather than their standing in a group?",
+            "uk": "Наскільки тобі властиво оцінювати незнайому людину за її вчинками, а не за становищем у групі?"
+        },
+        "house": "H",
+        "facet": "fairness",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно считать небольшое преимущество для своих друзей приемлемым, даже если остальным оно недоступно?",
+            "en": "How typical is it of you to consider a small advantage for your friends acceptable even when others cannot have it?",
+            "uk": "Наскільки тобі властиво вважати невелику перевагу для друзів прийнятною, навіть якщо іншим вона недоступна?"
+        },
+        "house": "H",
+        "facet": "fairness",
+        "kind": "behaviour",
+        "reverse": true
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно добиваться общего результата, даже если личный вклад не будет выделен?",
+            "en": "How important is it to you to achieve a shared result even if your individual contribution will not be singled out?",
+            "uk": "Наскільки для тебе важливо досягати спільного результату, навіть якщо особистий внесок не буде виокремлено?"
+        },
+        "house": "H",
+        "facet": "patience_cooperation",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько для тебя важно давать другим время освоить то, что тебе уже даётся легко?",
+            "en": "How important is it to you to give others time to master something you already find easy?",
+            "uk": "Наскільки для тебе важливо давати іншим час опанувати те, що тобі вже дається легко?"
+        },
+        "house": "H",
+        "facet": "patience_cooperation",
+        "kind": "value",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно спокойно продолжать совместную работу, когда прогресс идёт медленнее ожидаемого?",
+            "en": "How typical is it of you to carry on working with others calmly when progress is slower than expected?",
+            "uk": "Наскільки тобі властиво спокійно продовжувати спільну роботу, коли поступ повільніший, ніж очікувалося?"
+        },
+        "house": "H",
+        "facet": "patience_cooperation",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно помогать участнику группы освоиться с общей задачей, даже если это замедляет твою работу?",
+            "en": "How typical is it of you to help a group member get to grips with a shared task even if it slows your own work?",
+            "uk": "Наскільки тобі властиво допомагати учаснику групи освоїти спільне завдання, навіть якщо це сповільнює твою роботу?"
+        },
+        "house": "H",
+        "facet": "patience_cooperation",
+        "kind": "behaviour",
+        "reverse": false
+    },
+    {
+        "text": {
+            "ru": "Насколько тебе свойственно искать решение, с которым всем участникам будет удобно работать?",
+            "en": "How typical is it of you to look for a solution that all participants can comfortably work with?",
+            "uk": "Наскільки тобі властиво шукати рішення, з яким усім учасникам буде зручно працювати?"
+        },
+        "house": "H",
+        "facet": "patience_cooperation",
+        "kind": "behaviour",
+        "reverse": false
+    }
+];
+
+        const shortQuestions = [
+  {
+    "text": {
+      "ru": "Когда что-то кажется тебе правильным, готов ли ты открыто отстаивать свою позицию, даже если останешься в меньшинстве?",
+      "en": "When something seems right to you, are you willing to stand up for it openly, even if you find yourself in the minority?",
+      "uk": "Коли щось здається тобі правильним, чи готовий ти відкрито обстоювати свою позицію, навіть якщо опинишся в меншості?"
+    },
+    "house": "G",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Готов ли ты действовать, даже когда тебе страшно?",
+      "en": "Are you willing to act even when you are afraid?",
+      "uk": "Чи готовий ти діяти, навіть коли тобі страшно?"
+    },
+    "house": "G",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Если на твоих глазах кого-то несправедливо обижают, возникает ли у тебя желание вмешаться сразу?",
+      "en": "If you see someone being treated unfairly, is your first instinct to intervene?",
+      "uk": "Якщо на твоїх очах когось несправедливо кривдять, чи виникає в тебе бажання одразу втрутитися?"
+    },
+    "house": "G",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Привлекают ли тебя испытания, требующие преодоления собственного страха?",
+      "en": "Are you drawn to challenges that require you to overcome your own fears?",
+      "uk": "Чи приваблюють тебе випробування, що вимагають подолання власного страху?"
+    },
+    "house": "G",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "В неопределённой ситуации предпочитаешь ли ты сделать первый шаг, а не ждать полной ясности?",
+      "en": "In an uncertain situation, do you prefer to take the first step rather than wait for complete clarity?",
+      "uk": "У невизначеній ситуації чи волієш ти зробити перший крок, а не чекати цілковитої ясності?"
+    },
+    "house": "G",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Ценишь ли ты прямоту, даже если более дипломатичный подход был бы удобнее?",
+      "en": "Do you value being direct, even when a more diplomatic approach would be easier?",
+      "uk": "Чи цінуєш ти прямоту, навіть якщо дипломатичніший підхід був би зручнішим?"
+    },
+    "house": "G",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Случается ли тебе действовать сгоряча, а о последствиях думать уже потом?",
+      "en": "Do you sometimes act in the heat of the moment and only consider the consequences afterwards?",
+      "uk": "Чи трапляється тобі діяти зопалу, а про наслідки думати вже потім?"
+    },
+    "house": "G",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Трудно ли тебе отступить от вызова, если отступление кажется проявлением трусости?",
+      "en": "Do you find it hard to back down from a challenge if doing so feels cowardly?",
+      "uk": "Чи важко тобі відступити перед викликом, якщо відступ здається проявом боягузтва?"
+    },
+    "house": "G",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Если открытое несогласие может вызвать конфликт, предпочитаешь ли ты промолчать?",
+      "en": "If openly disagreeing might cause a confrontation, do you prefer to keep quiet?",
+      "uk": "Якщо відкрита незгода може спричинити конфлікт, чи волієш ти промовчати?"
+    },
+    "house": "G",
+    "reverse": true
+  },
+  {
+    "text": {
+      "ru": "Предпочитаешь ли ты отказаться от интересного испытания, если не уверен в своих силах?",
+      "en": "Do you prefer to turn down an interesting challenge if you are unsure of your abilities?",
+      "uk": "Чи волієш ти відмовитися від цікавого випробування, якщо не впевнений у власних силах?"
+    },
+    "house": "G",
+    "reverse": true
+  },
+  {
+    "text": {
+      "ru": "Свойственно ли тебе ставить перед собой цели, которые требуют выйти за пределы уже достигнутого?",
+      "en": "Do you tend to set yourself goals that take you beyond what you have already achieved?",
+      "uk": "Чи властиво тобі ставити перед собою цілі, що вимагають вийти за межі вже досягнутого?"
+    },
+    "house": "S",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Прежде чем действовать, стараешься ли ты продумать несколько шагов вперёд?",
+      "en": "Before acting, do you try to think several steps ahead?",
+      "uk": "Перш ніж діяти, чи намагаєшся ти продумати кілька кроків наперед?"
+    },
+    "house": "S",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Когда привычный способ не работает, стараешься ли ты обратить обстоятельства в свою пользу?",
+      "en": "When the usual approach fails, do you look for ways to turn the circumstances to your advantage?",
+      "uk": "Коли звичний спосіб не спрацьовує, чи намагаєшся ти обернути обставини на свою користь?"
+    },
+    "house": "S",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Важно ли тебе самостоятельно определять своё будущее, а не зависеть от чужих решений?",
+      "en": "Is it important to you to shape your own future rather than depend on other people’s decisions?",
+      "uk": "Чи важливо тобі самостійно визначати власне майбутнє, а не залежати від чужих рішень?"
+    },
+    "house": "S",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Доставляет ли тебе удовольствие поиск наиболее выгодного способа достичь цели?",
+      "en": "Do you enjoy finding the most advantageous way to achieve a goal?",
+      "uk": "Чи приносить тобі задоволення пошук найвигіднішого способу досягти мети?"
+    },
+    "house": "S",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Важно ли тебе иметь возможность влиять на решения, от которых зависит твой успех?",
+      "en": "Is it important to you to have influence over decisions that affect your success?",
+      "uk": "Чи важливо тобі мати змогу впливати на рішення, від яких залежить твій успіх?"
+    },
+    "house": "S",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Предпочитаешь ли ты не раскрывать свои планы, пока не появится подходящий момент для их осуществления?",
+      "en": "Do you prefer to keep your plans to yourself until the right moment to put them into action?",
+      "uk": "Чи волієш ти не розкривати своїх планів, доки не настане слушний момент для їх здійснення?"
+    },
+    "house": "S",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Случается ли тебе настолько сосредоточиться на результате, что сам процесс перестаёт иметь значение?",
+      "en": "Do you sometimes become so focused on the outcome that the process itself stops mattering?",
+      "uk": "Чи трапляється тобі настільки зосередитися на результаті, що сам процес перестає мати значення?"
+    },
+    "house": "S",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Если имеющееся положение тебя устраивает, обычно ли ты отказываешься от возможностей добиться большего?",
+      "en": "If you are comfortable with your current position, do you usually pass up opportunities to achieve more?",
+      "uk": "Якщо теперішнє становище тебе влаштовує, чи зазвичай ти відмовляєшся від можливостей досягти більшого?"
+    },
+    "house": "S",
+    "reverse": true
+  },
+  {
+    "text": {
+      "ru": "Предпочитаешь ли ты придерживаться привычного плана, даже когда другой путь может оказаться более выгодным?",
+      "en": "Do you prefer to stick to a familiar plan even when another route might offer a better outcome?",
+      "uk": "Чи волієш ти дотримуватися звичного плану, навіть коли інший шлях може виявитися вигіднішим?"
+    },
+    "house": "S",
+    "reverse": true
+  },
+  {
+    "text": {
+      "ru": "Возникает ли у тебя желание разобраться в том, как что-то устроено, даже если это не принесёт практической пользы?",
+      "en": "Do you want to understand how things work even when the knowledge has no practical use?",
+      "uk": "Чи виникає в тебе бажання розібратися, як щось влаштовано, навіть якщо це не матиме практичної користі?"
+    },
+    "house": "R",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Нравится ли тебе рассматривать одну и ту же проблему с разных точек зрения?",
+      "en": "Do you enjoy looking at the same problem from different perspectives?",
+      "uk": "Чи подобається тобі розглядати ту саму проблему з різних точок зору?"
+    },
+    "house": "R",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Получаешь ли ты удовольствие от задач, в которых нужно найти неожиданную закономерность?",
+      "en": "Do you enjoy problems that involve discovering an unexpected pattern?",
+      "uk": "Чи подобаються тобі завдання, у яких потрібно виявити несподівану закономірність?"
+    },
+    "house": "R",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Важно ли тебе самостоятельно проверять доводы, даже если их высказывает авторитетный человек?",
+      "en": "Is it important to you to assess arguments for yourself, even when they come from an authority?",
+      "uk": "Чи важливо тобі самостійно перевіряти аргументи, навіть якщо їх висловлює авторитетна людина?"
+    },
+    "house": "R",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Привлекает ли тебя возможность придумать собственный подход вместо применения готового решения?",
+      "en": "Are you drawn to devising your own approach rather than using a ready-made solution?",
+      "uk": "Чи приваблює тебе можливість вигадати власний підхід замість застосування готового рішення?"
+    },
+    "house": "R",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Нравится ли тебе изучать темы, далёкие от твоих основных интересов, из чистого любопытства?",
+      "en": "Do you enjoy exploring subjects outside your usual interests out of sheer curiosity?",
+      "uk": "Чи подобається тобі з чистої цікавості досліджувати теми, далекі від твоїх основних інтересів?"
+    },
+    "house": "R",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Случается ли тебе так увлечься поиском объяснения, что ты откладываешь принятие решения?",
+      "en": "Do you sometimes become so absorbed in finding an explanation that you put off making a decision?",
+      "uk": "Чи трапляється тобі так захопитися пошуком пояснення, що ти відкладаєш ухвалення рішення?"
+    },
+    "house": "R",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Бывает ли, что сама загадка интересует тебя больше, чем необходимость её решить?",
+      "en": "Do you sometimes find the puzzle itself more interesting than the need to solve it?",
+      "uk": "Чи буває так, що сама загадка цікавить тебе більше, ніж необхідність її розв’язати?"
+    },
+    "house": "R",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Если объяснение кажется правдоподобным, обычно ли тебе достаточно принять его, не разбираясь дальше?",
+      "en": "If an explanation seems plausible, are you usually content to accept it without investigating further?",
+      "uk": "Якщо пояснення здається правдоподібним, чи зазвичай тобі достатньо прийняти його, не з’ясовуючи подробиць?"
+    },
+    "house": "R",
+    "reverse": true
+  },
+  {
+    "text": {
+      "ru": "Предпочитаешь ли ты изучать только то, что пригодится тебе в обозримом будущем?",
+      "en": "Do you prefer to learn only things that will be useful to you in the foreseeable future?",
+      "uk": "Чи волієш ти вивчати лише те, що стане тобі в пригоді в осяжному майбутньому?"
+    },
+    "house": "R",
+    "reverse": true
+  },
+  {
+    "text": {
+      "ru": "Готов ли ты продолжать кропотливую работу, даже когда результат появится нескоро?",
+      "en": "Are you willing to keep doing painstaking work even when results are a long way off?",
+      "uk": "Чи готовий ти продовжувати копітку працю, навіть коли результат з’явиться нескоро?"
+    },
+    "house": "H",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Важно ли тебе выполнять обещания, даже когда это становится неудобно?",
+      "en": "Is it important to you to keep your promises even when doing so becomes inconvenient?",
+      "uk": "Чи важливо тобі дотримуватися обіцянок, навіть коли це стає незручно?"
+    },
+    "house": "H",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Считаешь ли ты важным, чтобы к незнакомым людям применялись те же правила, что и к твоим близким?",
+      "en": "Do you think strangers should be treated by the same rules as those close to you?",
+      "uk": "Чи вважаєш ти важливим, щоб до незнайомих людей застосовувалися ті самі правила, що й до твоїх близьких?"
+    },
+    "house": "H",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Приносит ли тебе удовлетворение вклад в общее дело, даже если твоя работа остаётся незаметной?",
+      "en": "Do you find satisfaction in contributing to a shared endeavour even if your work goes unnoticed?",
+      "uk": "Чи приносить тобі задоволення внесок у спільну справу, навіть якщо твоя робота залишається непомітною?"
+    },
+    "house": "H",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Готов ли ты дать человеку время исправить ошибку, прежде чем делать окончательные выводы о нём?",
+      "en": "Are you willing to give someone time to put a mistake right before forming a final judgement of them?",
+      "uk": "Чи готовий ти дати людині час виправити помилку, перш ніж робити остаточні висновки про неї?"
+    },
+    "house": "H",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Важно ли тебе быть человеком, на которого другие могут положиться в повседневных делах?",
+      "en": "Is it important to you to be someone others can rely on in everyday matters?",
+      "uk": "Чи важливо тобі бути людиною, на яку інші можуть покластися в повсякденних справах?"
+    },
+    "house": "H",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Случается ли тебе слишком долго сохранять верность людям, которые перестали отвечать тебе взаимностью?",
+      "en": "Do you sometimes remain loyal for too long to people who no longer return that loyalty?",
+      "uk": "Чи трапляється тобі надто довго зберігати відданість людям, які вже не відповідають тобі взаємністю?"
+    },
+    "house": "H",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Бывает ли тебе трудно отказаться от обязательства, даже когда оно стало чрезмерно обременительным?",
+      "en": "Do you find it hard to let go of a commitment even when it has become overly burdensome?",
+      "uk": "Чи буває тобі важко відмовитися від зобов’язання, навіть коли воно стало надто обтяжливим?"
+    },
+    "house": "H",
+    "reverse": false
+  },
+  {
+    "text": {
+      "ru": "Если работа стала однообразной, обычно ли ты предпочитаешь оставить её незавершённой?",
+      "en": "If a task becomes monotonous, do you usually prefer to leave it unfinished?",
+      "uk": "Якщо робота стає одноманітною, чи зазвичай ти волієш залишити її незавершеною?"
+    },
+    "house": "H",
+    "reverse": true
+  },
+  {
+    "text": {
+      "ru": "Если в совместном деле у тебя есть возможность переложить свою часть работы на другого, обычно ли ты ею пользуешься?",
+      "en": "If you have the opportunity to leave your share of a joint task to someone else, do you usually take it?",
+      "uk": "Якщо у спільній справі є змога перекласти свою частину роботи на когось іншого, чи зазвичай ти нею користуєшся?"
+    },
+    "house": "H",
+    "reverse": true
+  }
+];
+
+        // Векторные пиксельные маскоты факультетов
+        const mascots = {
+            'G': `<svg class="pixel-mascot" viewBox="0 0 16 16" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="2" width="8" height="10" fill="var(--fg-color)"/><rect x="3" y="3" width="10" height="8" fill="var(--fg-color)"/><rect x="5" y="4" width="6" height="6" fill="var(--bg-color)"/><rect x="6" y="5" width="1" height="1" fill="var(--fg-color)"/><rect x="9" y="5" width="1" height="1" fill="var(--fg-color)"/><rect x="7" y="7" width="2" height="1" fill="var(--fg-color)"/><rect x="5" y="10" width="2" height="4" fill="var(--fg-color)"/><rect x="9" y="10" width="2" height="4" fill="var(--fg-color)"/></svg>`, // Лев
+            'S': `<svg class="pixel-mascot" viewBox="0 0 16 16" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="5" height="4" fill="var(--fg-color)"/><rect x="3" y="8" width="2" height="4" fill="var(--fg-color)"/><rect x="5" y="10" width="6" height="2" fill="var(--fg-color)"/><rect x="9" y="12" width="2" height="2" fill="var(--fg-color)"/><rect x="3" y="14" width="10" height="2" fill="var(--fg-color)"/><rect x="5" y="5" width="1" height="1" fill="var(--bg-color)"/><rect x="9" y="6" width="2" height="1" fill="var(--fg-color)"/></svg>`, // Змея
+            'R': `<svg class="pixel-mascot" viewBox="0 0 16 16" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="3" width="4" height="4" fill="var(--fg-color)"/><rect x="4" y="7" width="6" height="6" fill="var(--fg-color)"/><rect x="2" y="8" width="2" height="4" fill="var(--fg-color)"/><rect x="10" y="8" width="2" height="4" fill="var(--fg-color)"/><rect x="9" y="4" width="3" height="2" fill="var(--fg-color)"/><rect x="6" y="4" width="1" height="1" fill="var(--bg-color)"/><rect x="3" y="13" width="2" height="2" fill="var(--fg-color)"/><rect x="9" y="13" width="2" height="2" fill="var(--fg-color)"/></svg>`, // Ворон
+            'H': `<svg class="pixel-mascot" viewBox="0 0 16 16" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="7" width="12" height="6" fill="var(--fg-color)"/><rect x="3" y="6" width="10" height="1" fill="var(--fg-color)"/><rect x="4" y="7" width="2" height="4" fill="var(--bg-color)"/><rect x="10" y="7" width="2" height="4" fill="var(--bg-color)"/><rect x="4" y="8" width="1" height="1" fill="var(--fg-color)"/><rect x="11" y="8" width="1" height="1" fill="var(--fg-color)"/><rect x="7" y="10" width="2" height="1" fill="var(--bg-color)"/><rect x="3" y="13" width="2" height="2" fill="var(--fg-color)"/><rect x="11" y="13" width="2" height="2" fill="var(--fg-color)"/></svg>`  // Барсук
+        };
+
+        let questions = [];
+        let currentQuestionIndex = 0;
+        let answers = []; 
+        let history = []; 
+        
+
+        let audioContext = null;
+        let voiceBus = null;
+        let soundEnabled = false;
+        let voiceNodes = new Set();
+        let lastVoiceTime = 0;
+
+        function updateSoundButton() {
+            const button = document.getElementById('sound-toggle');
+            button.textContent = i18n[soundEnabled ? 'soundOn' : 'soundOff'][currentLang];
+            button.title = i18n.soundHint[currentLang];
+            button.setAttribute('aria-pressed', String(soundEnabled));
+        }
+        async function toggleSound() {
+            if (soundEnabled) {
+                soundEnabled = false; stopVoice(); updateSoundButton(); return;
+            }
+            try {
+                const Audio = window.AudioContext || window.webkitAudioContext;
+                if (!Audio) return;
+                if (!audioContext) {
+                    audioContext = new Audio();
+                    voiceBus = audioContext.createGain();
+                    voiceBus.gain.value = 0.24;
+                    voiceBus.connect(audioContext.destination);
+                }
+                await audioContext.resume();
+                soundEnabled = audioContext.state === 'running';
+                updateSoundButton();
+                if (soundEnabled) voiceSyllable(5, true);
+            } catch (err) { soundEnabled = false; updateSoundButton(); }
+        }
+        function stopVoice() {
+            for (const node of voiceNodes) { try { node.stop(); } catch {} }
+            voiceNodes.clear();
+            lastVoiceTime = 0;
+        }
+        function voiceSyllable(seed, soft = false) {
+            if (!soundEnabled || !audioContext || audioContext.state !== 'running') return;
+            const t = audioContext.currentTime;
+            const length = 0.070 + (seed % 4) * 0.008;
+            const pitch = [132,147,156,165,175,139,151][seed % 7];
+            const envelope = audioContext.createGain();
+            const filter = audioContext.createBiquadFilter();
+            filter.type = 'lowpass'; filter.frequency.value = 680 + (seed % 5) * 110; filter.Q.value = 0.9;
+            const osc = audioContext.createOscillator();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(pitch * 1.08, t);
+            osc.frequency.exponentialRampToValueAtTime(pitch * 0.86, t + length);
+            const overtone = audioContext.createOscillator();
+            overtone.type = 'square'; overtone.frequency.value = pitch * 2;
+            const harmonicGain = audioContext.createGain(); harmonicGain.gain.value = 0.075;
+            osc.connect(filter); overtone.connect(harmonicGain); harmonicGain.connect(filter);
+            filter.connect(envelope); envelope.connect(voiceBus);
+            envelope.gain.setValueAtTime(0.0001,t);
+            envelope.gain.exponentialRampToValueAtTime(soft ? 0.075 : 0.115,t + 0.012);
+            envelope.gain.exponentialRampToValueAtTime(0.0001,t + length);
+            for (const node of [osc,overtone]) { voiceNodes.add(node); node.start(t); node.stop(t + length + .008); }
+            osc.onended = () => { voiceNodes.delete(osc); voiceNodes.delete(overtone); envelope.disconnect(); };
+        }
+        function speakGlyph(text, i) {
+            if (!soundEnabled || !audioContext || i < 1) return;
+            const ch = text[i-1];
+            if (!ch || !/\p{L}/u.test(ch)) return;
+            const t = audioContext.currentTime;
+            if (t - lastVoiceTime < .085 && lastVoiceTime !== 0) return;
+            const vowel = /[aeiouyаеёиоуыэюяєії]/i.test(ch);
+            if (!vowel && i % 3 !== 0 && !/\s/.test(text[i-2] || ' ')) return;
+            lastVoiceTime = t;
+            voiceSyllable(ch.toLowerCase().codePointAt(0) + i % 5);
+        }
+        function setTypedText(element, value) {
+            const cursor = document.createElement('span'); cursor.className = 'cursor-blink'; cursor.setAttribute('aria-hidden','true');
+            element.replaceChildren(document.createTextNode(value), cursor);
+        }
+        updateSoundButton();
+
+        let typeInterval;
+        let isTyping = false;
+        let currentFullText = "";
+        let currentElement = null;
+        let onTypeComplete = null;
+
+        function typeWriter(elementId, text, speed = 30, callback = null) {
+            const element = document.getElementById(elementId);
+            const hat = document.getElementById('sorting-hat-anim');
+            
+            currentElement = element;
+            currentFullText = text;
+            onTypeComplete = callback;
+            isTyping = true;
+            
+            if (hat) hat.classList.add('is-talking');
+            
+            clearInterval(typeInterval);
+            stopVoice();
+            setTypedText(element, "");
+            
+            let i = 1;
+            typeInterval = setInterval(() => {
+                setTypedText(element, text.substring(0, i));
+                speakGlyph(text, i);
+                i++;
+                if (i > text.length) {
+                    finishTyping();
+                }
+            }, speed);
+        }
+
+        function finishTyping() {
+            if(!isTyping) return;
+            clearInterval(typeInterval);
+            
+            const hat = document.getElementById('sorting-hat-anim');
+            if (hat) hat.classList.remove('is-talking');
+
+            if(currentElement) {
+                setTypedText(currentElement, currentFullText);
+                stopVoice();
+            }
+            isTyping = false;
+            const callback = onTypeComplete;
+            onTypeComplete = null;
+            if (callback) callback();
+        }
+
+        // Пропуск печати при клике (только если клик не по кнопке!)
+        document.getElementById('main-container').addEventListener('click', (e) => {
+            if (e.target.closest('button,select,label')) return; 
+            if (isTyping) finishTyping();
+        });
+
+        window.onload = () => {
+            initTypography();
+            currentScreen = 'start';
+            for (const [id,key] of [['title-text','title'],['btn-restart','restartBtn'],['btn-back','backBtn'],['verdict-prefix','verdictPrefix'],['tie-title','tieTitle']]) document.getElementById(id).textContent = i18n[key][currentLang];
+            for (let i=0;i<5;i++) document.getElementById(`ans-btn-${i}`).textContent = i18n.answers[i][currentLang];
+            updateModeLabels();
+            const startBtn = document.getElementById('start-options');
+            startBtn.classList.remove('hidden');
+            startBtn.classList.add('flex', 'opacity-0', 'pointer-events-none');
+            startBtn.inert = true;
+            
+            typeWriter('start-desc', i18n.startDesc[currentLang], 30, () => {
+                startBtn.classList.remove('opacity-0', 'pointer-events-none');
+                startBtn.classList.add('opacity-100');
+                startBtn.inert = false;
+                startBtn.querySelectorAll('button').forEach(button => button.disabled = false);
+            });
+        };
+
+        function shuffle(array) {
+            let currentIndex = array.length, randomIndex;
+            while (currentIndex !== 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        function updateModeLabels() {
+            document.getElementById('btn-start').textContent = i18n.startShort[currentLang];
+            document.getElementById('btn-start-long').textContent = i18n.startLong[currentLang];
+        }
+
+        function startTest(mode) {
+            if (currentScreen !== 'start' || isTyping || !['short', 'long'].includes(mode)) return;
+            testMode = mode;
+            currentScreen = 'quiz';
+            currentQuestionIndex = 0;
+            answers = [];
+            history = [];
+            questions = shuffle([...(mode === 'long' ? longQuestions : shortQuestions)]); 
+            
+            document.getElementById('text-start').classList.add('hidden');
+            document.getElementById('start-options').classList.add('hidden');
+            
+            document.getElementById('text-quiz').classList.remove('hidden');
+            document.getElementById('text-quiz').classList.add('flex');
+            
+            renderQuestion();
+        }
+
+        function updateAnswerLabels() {
+            const question = questions[currentQuestionIndex];
+            if (!question) return;
+            const scale = testMode === 'short' ? i18n.answers : i18n.answerScales[question.kind];
+            for (let i = 0; i < 5; i++) {
+                document.getElementById(`ans-btn-${i}`).textContent = scale[i][currentLang];
+            }
+        }
+
+        function updateQuestionUI() {
+            updateAnswerLabels();
+            const counter = document.getElementById('question-counter');
+            const qNum = (currentQuestionIndex + 1).toString().padStart(2, '0');
+            const qTotal = questions.length.toString().padStart(2, '0');
+            counter.textContent = `${i18n.questionPrefix[currentLang]}: ${qNum}/${qTotal}`;
+        }
+
+        function renderQuestion() {
+            const progressBar = document.getElementById('progress-bar');
+            const backBtn = document.getElementById('btn-back');
+            const answersContainer = document.getElementById('answers-container');
+
+            answersContainer.classList.remove('hidden', 'opacity-100');
+            answersContainer.classList.add('flex', 'opacity-0', 'pointer-events-none');
+            answersContainer.inert = true;
+
+            updateQuestionUI();
+            
+            const progress = ((currentQuestionIndex) / questions.length) * 100;
+            progressBar.style.width = `${progress}%`;
+
+            if (currentQuestionIndex > 0) {
+                backBtn.classList.remove('opacity-0', 'pointer-events-none');
+                backBtn.disabled = false;
+            } else {
+                backBtn.classList.add('opacity-0', 'pointer-events-none');
+                backBtn.disabled = true;
+            }
+
+            const currentQ = questions[currentQuestionIndex];
+            typeWriter('question-text', `> ${currentQ.text[currentLang]}`, testMode === 'short' ? 30 : 18, () => {
+                answersContainer.classList.remove('opacity-0', 'pointer-events-none');
+                answersContainer.classList.add('opacity-100');
+                answersContainer.inert = false;
+            });
+        }
+
+        function handleAnswer(value) {
+            // Если текст еще печатается, мы не принимаем ответы (кнопки отключены pointer-events-none)
+            if (isTyping || currentScreen !== 'quiz' || !questions[currentQuestionIndex]) return;
+
+            const currentQ = questions[currentQuestionIndex];
+            history.push([...answers]);
+            answers.push({ house: currentQ.house, value: (currentQ.reverse ? 4 - value : value) * questionWeight(currentQ) });
+
+            currentQuestionIndex++;
+
+            if (currentQuestionIndex < questions.length) {
+                renderQuestion();
+            } else {
+                currentScreen = 'calculating';
+                document.getElementById('progress-bar').style.width = '100%';
+                document.getElementById('question-counter').textContent = i18n.calculating[currentLang];
+                
+                const answersContainer = document.getElementById('answers-container');
+                answersContainer.classList.remove('opacity-100');
+                answersContainer.classList.add('opacity-0', 'pointer-events-none');
+                answersContainer.inert = true;
+                
+                typeWriter('question-text', i18n.thinking[currentLang], 40, () => {
+                    setTimeout(calculateWinner, 1000);
+                });
+            }
+        }
+
+        function goBack() {
+            if (currentScreen !== 'quiz' || currentQuestionIndex === 0 || isTyping) return;
+            
+            currentQuestionIndex--;
+            answers = history.pop(); 
+            renderQuestion();
+        }
+
+        // 8 value items × 3 and 12 behaviour items × 2: equal total weight.
+        function questionWeight(q) { return testMode === 'short' ? 1 : (q.kind === 'value' ? 3 : 2); }
+
+        function calculateWinner() {
+            const scores = { G: 0, S: 0, R: 0, H: 0 };
+            const maxScores = { G: 0, S: 0, R: 0, H: 0 };
+
+            questions.forEach(q => maxScores[q.house] += 4 * questionWeight(q));
+            answers.forEach(ans => scores[ans.house] += ans.value);
+
+            const percentages = {
+                G: (maxScores.G > 0) ? (scores.G / maxScores.G) * 100 : 0,
+                S: (maxScores.S > 0) ? (scores.S / maxScores.S) * 100 : 0,
+                R: (maxScores.R > 0) ? (scores.R / maxScores.R) * 100 : 0,
+                H: (maxScores.H > 0) ? (scores.H / maxScores.H) * 100 : 0
+            };
+
+            // Compare exact score ratios using integer cross-multiplication.
+            // A choice is offered only to houses tied for first place.
+            const houses = Object.keys(scores).filter(h => maxScores[h] > 0);
+            const leader = houses.reduce((best, h) =>
+                scores[h] * maxScores[best] > scores[best] * maxScores[h] ? h : best
+            );
+            const tiedHouses = houses.filter(h =>
+                scores[h] * maxScores[leader] === scores[leader] * maxScores[h]
+            );
+
+            // Прячем экран викторины полностью
+            document.getElementById('text-quiz').classList.add('hidden');
+            document.getElementById('answers-container').classList.add('hidden');
+
+            if (tiedHouses.length > 1) {
+                showTieBreaker(tiedHouses);
+            } else {
+                showResultScreen(tiedHouses[0]);
+            }
+        }
+
+        function showTieBreaker(houses) {
+            currentScreen = 'tie';
+            tiedHousesState = houses;
+            document.getElementById('text-tie').classList.remove('hidden');
+            document.getElementById('text-tie').classList.add('flex');
+
+            const optionsContainer = document.getElementById('tie-breaker-options');
+            optionsContainer.classList.remove('hidden');
+            optionsContainer.classList.add('flex', 'opacity-0', 'pointer-events-none');
+            optionsContainer.inert = true;
+            
+            renderTieOptions(houses);
+
+            typeWriter('tie-breaker-text', i18n.tieDesc[currentLang], 30, () => {
+                optionsContainer.classList.remove('opacity-0', 'pointer-events-none');
+                optionsContainer.classList.add('opacity-100');
+                optionsContainer.inert = false;
+            });
+        }
+
+        function renderTieOptions(houses) {
+            const optionsContainer = document.getElementById('tie-breaker-options');
+            optionsContainer.innerHTML = '';
+            houses.forEach(house => {
+                const btn = document.createElement('button');
+                btn.className = 'btn-retro py-3 px-4 text-center';
+                btn.textContent = i18n.tieBtnPrefix[currentLang] + i18n.houses[house][currentLang];
+                btn.onclick = () => {
+                    document.getElementById('text-tie').classList.add('hidden');
+                    optionsContainer.classList.add('hidden');
+                    showResultScreen(house);
+                };
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function showResultScreen(winnerHouse) {
+            currentScreen = 'result';
+            finalHouse = winnerHouse;
+            const resultScreen = document.getElementById('text-result');
+            resultScreen.classList.remove('hidden');
+            resultScreen.classList.add('flex');
+
+            const btnRestart = document.getElementById('btn-restart');
+            btnRestart.classList.remove('hidden');
+            btnRestart.classList.add('opacity-0', 'pointer-events-none');
+            btnRestart.disabled = true;
+
+
+            const houseClasses = {
+                'G': 'theme-gryffindor',
+                'S': 'theme-slytherin',
+                'R': 'theme-ravenclaw',
+                'H': 'theme-hufflepuff'
+            };
+
+
+            const mascotContainer = document.getElementById('mascot-container');
+            mascotContainer.innerHTML = mascots[winnerHouse];
+            mascotContainer.classList.remove('hidden');
+            mascotContainer.classList.add('flex');
+
+            document.body.classList.add(houseClasses[winnerHouse]);
+            document.getElementById('result-house').textContent = i18n.houses[winnerHouse][currentLang];
+            
+            typeWriter('result-desc', i18n.descriptions[winnerHouse][currentLang], 40, () => {
+                btnRestart.classList.remove('opacity-0', 'pointer-events-none');
+                btnRestart.classList.add('opacity-100');
+                btnRestart.disabled = false;
+                
+                // Проявляем пиксельного маскота вместе с кнопкой
+                mascotContainer.classList.remove('opacity-0');
+                mascotContainer.classList.add('opacity-100');
+            });
+        }
+    </script>
+</body>
+</html>
